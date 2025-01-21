@@ -1,19 +1,25 @@
 #include "raylib.h"
+#include "MapManager.h"
 #include <iostream>
 
 using namespace std;
+
+MapManager mm;
 
 int main() {
 
     
     cout << "Hello World" << endl;
 
-    InitWindow(300, 300, "My first Raylib window!");
+    InitWindow(1073, 1073, "My first Raylib window!");
     SetTargetFPS(60);
+
+    mm.Load();
 
     while (!WindowShouldClose()) {
         BeginDrawing();
-        ClearBackground(DARKGREEN);
+        ClearBackground(GRAY);
+        mm.Draw();
         EndDrawing();
     }
 
