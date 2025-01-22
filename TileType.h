@@ -5,5 +5,10 @@ enum class TileType {
 	Challenging,
 	Difficult,
 	Obstacle,
-	Void
+	Void,
+	Start,
+	End,
+	Path,
+	PotentialPath,
+	PotentialPathBlocked
 };

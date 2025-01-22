@@ -19,6 +19,7 @@ int main() {
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(GRAY);
+        mm.Update();
         mm.Draw();
         EndDrawing();
     }
