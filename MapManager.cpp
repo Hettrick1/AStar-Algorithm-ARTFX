@@ -2,12 +2,14 @@
 #include "thread"
 #include "chrono"
 
+float totalCost;
+
 MapManager::MapManager()
 {
 	mMap[IMAGE_SIZE][IMAGE_SIZE] = {Tile()};
 	mMapImage = Image();
-	mMapIndex = 3;
-	mStartPosition = Vector2D( 38, 5 );
+	mMapIndex = MAP_INDEX;
+	mStartPosition = Vector2D( 38, 13 );
 	mEndPosition = Vector2D( 40, 90 );
 	mCanGoDiagonal = true;
 }
@@ -21,19 +23,21 @@ void MapManager::Load()
 	int index = 0;
 	mMapImage = LoadImage(TextFormat("maps/Map%i.png", mMapIndex));
 	Color* colors = LoadImageColors(mMapImage);
-	int tileSizeX = 10;
-	int TileSizeY = 10;
+	int tileSizeX = GetScreenWidth() / IMAGE_SIZE;
+	int TileSizeY = GetScreenWidth() / IMAGE_SIZE;
 	for (int i = 0; i < mMapImage.width; i++) {
 		for (int j = 0; j < mMapImage.width; j++) {
 			mMap[i][j] = Tile(j * tileSizeX, i * TileSizeY, tileSizeX, TileSizeY);
+			mMapOverlay[i][j] = Tile(j * tileSizeX, i * TileSizeY, tileSizeX, TileSizeY);
+			mMapOverlay[i][j].ChangeType(TileType::Invisible);
 			if (colors[index].g > 0 && colors[index].r == 0 && colors[index].b == 0) {
 				mMap[i][j].ChangeType(TileType::Normal);
 			}
 			else if (colors[index].r > 0 && colors[index].g == 0 && colors[index].b == 0) {
-				mMap[i][j].ChangeType(TileType::Challenging);
+				mMap[i][j].ChangeType(TileType::Difficult);
 			}
 			else if (colors[index].b > 0 && colors[index].r == 0 && colors[index].g == 0) {
-				mMap[i][j].ChangeType(TileType::Difficult);
+				mMap[i][j].ChangeType(TileType::Challenging);
 			}
 			else if (colors[index].b == 255 && colors[index].r == 255 && colors[index].g == 255) {
 				mMap[i][j].ChangeType(TileType::Void);
@@ -46,8 +50,8 @@ void MapManager::Load()
 	}
 	UnloadImageColors(colors);
 	UnloadImage(mMapImage);
-	mMap[static_cast<int>(mStartPosition.x)][static_cast<int>(mStartPosition.y)].ChangeType(TileType::Start);
-	mMap[static_cast<int>(mEndPosition.x)][static_cast<int>(mEndPosition.y)].ChangeType(TileType::End);
+	mMapOverlay[static_cast<int>(mStartPosition.x)][static_cast<int>(mStartPosition.y)].ChangeType(TileType::Start);
+	mMapOverlay[static_cast<int>(mEndPosition.x)][static_cast<int>(mEndPosition.y)].ChangeType(TileType::End);
 
 }
 
@@ -67,6 +71,7 @@ void MapManager::Draw()
 	for (int i = 0; i < IMAGE_SIZE; i++) {
 		for (int j = 0; j < IMAGE_SIZE; j++) {
 			mMap[i][j].Draw();
+			mMapOverlay[i][j].Draw();
 		}
 	}
 }
@@ -112,26 +117,27 @@ void MapManager::CalculateAStar()
 			BeginDrawing();
 			Draw();
 			EndDrawing();
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			//std::this_thread::sleep_for(std::chrono::milliseconds(0));
 			UnDrawCurrentPath(currentNode);
 			if (currentNode == endNode) {
 				DrawFinalPath(endNode);
+				std::cout << "total rounded cost : " << endNode->g << std::endl;
 				return;
 			}
 			for (Node* neighbor : GetNeighbors(currentNode)) {
 				if (std::find(closedList.begin(), closedList.end(), neighbor) != closedList.end()) {
 					continue;
 				}
-				int y = static_cast<int>(neighbor->position.x / 10);
-				int x = static_cast<int>(neighbor->position.y / 10);
-				mMap[x][y].ChangeType(TileType::PotentialPath);
-				y = static_cast<int>(currentNode->position.x / 10);
-				x = static_cast<int>(currentNode->position.y / 10);
-				mMap[x][y].ChangeType(TileType::PotentialPathBlocked);
+				int y = static_cast<int>(neighbor->position.x / (GetScreenWidth() / IMAGE_SIZE));
+				int x = static_cast<int>(neighbor->position.y / (GetScreenWidth() / IMAGE_SIZE));
+				mMapOverlay[x][y].ChangeType(TileType::PotentialPath);
+				y = static_cast<int>(currentNode->position.x / (GetScreenWidth() / IMAGE_SIZE));
+				x = static_cast<int>(currentNode->position.y / (GetScreenWidth() / IMAGE_SIZE));
+				mMapOverlay[x][y].ChangeType(TileType::PotentialPathBlocked);
 
-				int tentativeG = currentNode->g + currentNode->GetDistance(neighbor);
+				int tentativeG = (currentNode->g * currentNode->weight) + (currentNode->GetDistance(neighbor) / (GetScreenWidth() / IMAGE_SIZE) * 10); // euclidian distance
 
-				if (std::find(openList.begin(), openList.end(), neighbor) == openList.end() || tentativeG < neighbor->g) {
+				if (std::find(openList.begin(), openList.end(), neighbor) == openList.end() || tentativeG < (neighbor->g*neighbor->weight) ) {
 					neighbor->g = tentativeG;
 					neighbor->h = neighbor->GetDistance(endNode);
 					neighbor->f = neighbor->g + neighbor->h;
@@ -154,8 +160,8 @@ Tile& MapManager::GetTile(int i, int j)
 std::vector<Node*> MapManager::GetNeighbors(Node* current)
 {
 	std::vector<Node*> neighbors;
-	int y = static_cast<int>(current->position.x/10);
-	int x = static_cast<int>(current->position.y/10);
+	int y = static_cast<int>(current->position.x/ (GetScreenWidth() / IMAGE_SIZE));
+	int x = static_cast<int>(current->position.y/ (GetScreenWidth() / IMAGE_SIZE));
 
 	if (x > 0 && mMap[x - 1][y].GetTileType() != TileType::Obstacle) { // up neighbor
 		neighbors.push_back(&mMap[x - 1][y].GetNode());
@@ -190,21 +196,24 @@ std::vector<Node*> MapManager::GetNeighbors(Node* current)
 void MapManager::DrawFinalPath(Node* endNode)
 {
 	Node* currentNode = endNode;
+	//int nodeAmount = 0;
 	while (currentNode != nullptr) {
-		int y = static_cast<int>(currentNode->position.x/10);
-		int x = static_cast<int>(currentNode->position.y/10);
-		mMap[x][y].ChangeType(TileType::Path);
+		int y = static_cast<int>(currentNode->position.x/ (GetScreenWidth() / IMAGE_SIZE));
+		int x = static_cast<int>(currentNode->position.y/ (GetScreenWidth() / IMAGE_SIZE));
+		mMapOverlay[x][y].ChangeType(TileType::Path);
 		currentNode = currentNode->parent;
+		//nodeAmount++;
 	}
+	//std::cout << nodeAmount << std::endl;
 }
 
 void MapManager::UnDrawCurrentPath(Node* endNode)
 {
 	Node* currentNode = endNode;
 	while (currentNode != nullptr) {
-		int y = static_cast<int>(currentNode->position.x / 10);
-		int x = static_cast<int>(currentNode->position.y / 10);
-		mMap[x][y].ChangeType(TileType::PotentialPathBlocked);
+		int y = static_cast<int>(currentNode->position.x / (GetScreenWidth() / IMAGE_SIZE));
+		int x = static_cast<int>(currentNode->position.y / (GetScreenWidth() / IMAGE_SIZE));
+		mMapOverlay[x][y].ChangeType(TileType::PotentialPathBlocked);
 		currentNode = currentNode->parent;
 	}
 }

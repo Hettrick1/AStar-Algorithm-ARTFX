@@ -10,5 +10,6 @@ enum class TileType {
 	End,
 	Path,
 	PotentialPath,
-	PotentialPathBlocked
+	PotentialPathBlocked,
+	Invisible
 };

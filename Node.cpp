@@ -9,7 +9,7 @@ Node::~Node()
 {
 }
 
-int Node::GetDistance(Node* from)
+float Node::GetDistance(Node* from)
 {
-    return static_cast<int>(position.Distance(from->position));
+    return position.Distance(from->position);
 }

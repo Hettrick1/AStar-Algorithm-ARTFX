@@ -29,12 +29,15 @@ void Tile::ChangeType(TileType type)
 	mType = type;
 	if (mType == TileType::Normal) {
 		mColor = GREEN;
+		mNode.weight = 1;
 	}
 	else if (mType == TileType::Challenging) {
 		mColor = ORANGE;
+		mNode.weight = 1.2;
 	}
 	else if (mType == TileType::Difficult) {
 		mColor = RED;
+		mNode.weight = 1.5;
 	}
 	else if (mType == TileType::Obstacle) {
 		mColor = BLACK;
@@ -52,10 +55,13 @@ void Tile::ChangeType(TileType type)
 		mColor = PINK;
 	}
 	else if (mType == TileType::PotentialPath) {
-		mColor = Color{128, 0, 128, 128};
+		mColor = Color{51, 245, 255, 128};
 	}
 	else if (mType == TileType::PotentialPathBlocked) {
-		mColor = BROWN;
+		mColor = Color{ 51, 170, 255, 128 };
+	}
+	else if (mType == TileType::Invisible) {
+		mColor = BLANK;
 	}
 }
 

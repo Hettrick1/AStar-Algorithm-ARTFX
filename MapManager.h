@@ -5,12 +5,14 @@
 #include <vector>
 
 #define IMAGE_SIZE 100
+#define MAP_INDEX 3
 #define Inf std::numeric_limits<int>::max()
 
 class MapManager
 {
 private:
 	Tile mMap[IMAGE_SIZE][IMAGE_SIZE];
+	Tile mMapOverlay[IMAGE_SIZE][IMAGE_SIZE];
 	Image mMapImage;
 	int mMapIndex;
 	Vector2D mStartPosition;

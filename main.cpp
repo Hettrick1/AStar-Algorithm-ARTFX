@@ -11,8 +11,8 @@ int main() {
     
     cout << "Hello World" << endl;
 
-    InitWindow(1073, 1073, "My first Raylib window!");
-    SetTargetFPS(60);
+    InitWindow(1024, 1024, "My first Raylib window!");
+    SetTargetFPS(144);
 
     mm.Load();
 
